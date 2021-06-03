@@ -24,6 +24,10 @@ surfaces/0 = {
 
 [node name="Bullet" type="Spatial"]
 script = ExtResource( 2 )
+<<<<<<< HEAD
+=======
+Speed = 200.0
+>>>>>>> master
 
 [node name="Area" type="Area" parent="."]
 input_ray_pickable = false

@@ -2,56 +2,72 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
+//
+// Summary:
+//     The Player. Nuff said.
 public class Player : KinematicBody, HittableByBullets
 {
-    [Export]
-    public float Gravity = -24.8f;
-    [Export]
-    public float MaxSpeed = 20.0f;
-    [Export]
-    public float JumpSpeed = 18.0f;
-    [Export]
-    public float Accel = 4.5f;
-    [Export]
-    public float Deaccel = 16.0f;
-    [Export]
-    public float MaxSlopeAngle = 40.0f;
-    [Export]
-    public float MouseSensitivity = 0.05f;
-    [Export]
-    public float MaxSprintSpeed = 30.0f;
-    [Export]
-    public float SprintAccel = 18.0f;
+    const float MOUSE_SCROLL_WHEEL_SENSITIVITY = 0.08f;
+    const int MAX_HEALTH = 150;
 
-    private bool _isSprinting = false;
+    [Export] public float Gravity = -24.8f;
+    [Export] public float MaxSpeed = 20;
+    [Export] public float JumpSpeed = 18;
+    [Export] public float Acceleration = 4.5f;
+    [Export] public float Deacceleration = 16;
+    [Export] public float MaxSlopeAngle = 40;
+    [Export] public float MouseSensitivity = 0.05f;
+    [Export] public float MaxSprintSpeed = 30;
+    [Export] public float SprintAccel = 30;
 
-    private Vector3 _vel = new Vector3();
-    private Vector3 _dir = new Vector3();
-
-    private Camera _camera;
-    private Spatial _rotationHelper;
-
-    public AnimationPlayerManager AnimationPlayer;
-
-    private SpotLight _flashlight;
-
+    bool _isSprinting = false;
+    bool reloadingWeapon = false;
+    bool changingWeapon = false;    
     string currentWeaponName = "UNARMED";
-    Dictionary<string, Weapon> weapons = new Dictionary<string, Weapon>() { { "UNARMED", null }, { "KNIFE", null }, { "PISTOL", null }, { "RIFLE", null }, { "", null } };
-    Dictionary<int, string> weaponNumberToName = new Dictionary<int, string>() { { 0, "UNARMED" }, { 1, "KNIFE" }, { 2, "PISTOL" }, { 3, "RIFLE" }, { -1, "" } };
-    Dictionary<string, int> weaponNameToNumber = new Dictionary<string, int>() { { "UNARMED", 0 }, { "KNIFE", 1 }, { "PISTOL", 2 }, { "RIFLE", 3 }, { "", 0 } };
-    bool changingWeapon = false;
     string changingWeaponName = "UNARMED";
 
-    float health = 100;
+    float mouseScrollValue = 0;
 
-    Control UIStatusLabel;
+    [Export] float health = 100;
 
-    // Called when the node enters the scene tree for the first time.
+    Vector3 _velocity = new Vector3();
+    Vector3 _direction = new Vector3();
+
+    Camera _camera;
+    Spatial _rotationHelper;
+    SpotLight _flashlight;
+    PackedScene simpleAudioPlayer = GD.Load("res://Simple_Audio_Player.tscn") as PackedScene;
+    
+    public AnimationLoader AnimationPlayer;
+    
+    Dictionary<string, Weapon> weapons = new Dictionary<string, Weapon>() {
+        { "UNARMED", null },
+        { "KNIFE", null },
+        { "PISTOL", null },
+        { "RIFLE", null }
+    }; 
+    Dictionary<int, string> weaponNumberToName = new Dictionary<int, string>() {
+        { 0, "UNARMED" },
+        { 1, "KNIFE" },
+        { 2, "PISTOL" },
+        { 3, "RIFLE" }
+    };
+    Dictionary<string, int> weaponNameToNumber = new Dictionary<string, int>() {
+        { "UNARMED", 0 },
+        { "KNIFE", 1 },
+        { "PISTOL", 2 },
+        { "RIFLE", 3 }
+    };
+
+
+    Label UIStatusLabel;
+    
+    /// <summary>Called when the player enters the game for the first time.</summary>
     public override void _Ready()
     {
         _flashlight = GetNode<SpotLight>("Rotation_Helper/Flashlight");
         _camera = GetNode<Camera>("Rotation_Helper/Camera");
-        AnimationPlayer = GetNode<AnimationPlayerManager>("Rotation_Helper/Model/Animation_Player");
+        AnimationPlayer = GetNode<AnimationLoader>("Rotation_Helper/Model/Animation_Player");
         AnimationPlayer.CallbackFunction = FireBullet;
         _rotationHelper = GetNode<Spatial>("Rotation_Helper");
 
@@ -75,165 +91,204 @@ public class Player : KinematicBody, HittableByBullets
         currentWeaponName = "UNARMED";
         changingWeaponName = "UNARMED";
 
-        UIStatusLabel = GetNode<Control>("HUD/Panel/Gun_label");
+        UIStatusLabel = GetNode<Label>("HUD/Panel/Gun_label");
 
         Input.SetMouseMode(Input.MouseMode.Captured);
     }
 
     public override void _PhysicsProcess(float delta)
     {
-        ProcessInput(delta);
+        ProcessInput();
         ProcessMovement(delta);
-        ProcessChangingWeapons(delta);
-
+        ProcessChangingWeapons();
+        ProcessReloading();
+        ProcessUI();
+        HealthDecay(delta);
     }
 
-    private void ProcessInput(float delta)
+    void ProcessInput()
     {
-        //  -------------------------------------------------------------------
-        //  Walking
-        _dir = new Vector3();
+        GetWalkInput();
+        GetJumpInput();
+        GetFlashlightToggleInput();
+        GetCaptureCursorToggleInput();
+        GetChangeWeaponInput();
+        GetFireWeaponInput();
+        GetReloadInput();
+    }
+
+    void GetWalkInput()
+    {
+        _direction = new Vector3();
         Transform camXform = _camera.GlobalTransform;
 
         Vector2 inputMovementVector = new Vector2();
 
-        if (Input.IsActionPressed("movement_forward"))
-            inputMovementVector.y += 1;
-        if (Input.IsActionPressed("movement_backward"))
-            inputMovementVector.y -= 1;
-        if (Input.IsActionPressed("movement_left"))
-            inputMovementVector.x -= 1;
-        if (Input.IsActionPressed("movement_right"))
-            inputMovementVector.x += 1;
+        inputMovementVector.y += Input.IsActionPressed("movement_forward") ? 1 : 0;
+        inputMovementVector.y -= Input.IsActionPressed("movement_backward") ? 1 : 0;
+        inputMovementVector.x -= Input.IsActionPressed("movement_left") ? 1 : 0;
+        inputMovementVector.x += Input.IsActionPressed("movement_right") ? 1 : 0;
 
         inputMovementVector = inputMovementVector.Normalized();
 
-        // Basis vectors are already normalized.
-        _dir += -camXform.basis.z * inputMovementVector.y;
-        _dir += camXform.basis.x * inputMovementVector.x;
-        //  -------------------------------------------------------------------
+        _direction += -camXform.basis.z * inputMovementVector.y;
+        _direction += camXform.basis.x * inputMovementVector.x;
 
-        //  -------------------------------------------------------------------
-        //  Jumping
-        if (IsOnFloor())
-        {
+        _isSprinting = Input.IsActionPressed("movement_sprint") ? true : false;
+    }
+
+    void GetJumpInput() 
+    {
+        if (IsOnFloor()) {
             if (Input.IsActionJustPressed("movement_jump"))
-                _vel.y = JumpSpeed;
+                Jump();
         }
-        //  -------------------------------------------------------------------
+    }
 
-        //  -------------------------------------------------------------------
-        //  Capturing/Freeing the cursor
-        if (Input.IsActionJustPressed("ui_cancel"))
-        {
-            if (Input.GetMouseMode() == Input.MouseMode.Visible)
-                Input.SetMouseMode(Input.MouseMode.Captured);
-            else
-                Input.SetMouseMode(Input.MouseMode.Visible);
-        }
-        //  -------------------------------------------------------------------
-        //  Sprinting
-        if (Input.IsActionPressed("movement_sprint"))
-            _isSprinting = true;
-        else
-            _isSprinting = false;
-        //  -------------------------------------------------------------------
+    void Jump()
+    {
+        _velocity.y = JumpSpeed;
+    }
 
-        //  -------------------------------------------------------------------
-        //  Turning the flashlight on/off
-        if (Input.IsActionJustPressed("flashlight"))
-        {
+    void GetFlashlightToggleInput()
+    {
+        if ( Input.IsActionJustPressed("flashlight")) {
             if (_flashlight.IsVisibleInTree())
                 _flashlight.Hide();
             else
                 _flashlight.Show();
         }
-        //  ----------------------------------
-        //  Changing weapons.
+        
+    }
+
+    void GetCaptureCursorToggleInput()
+    {
+        if (Input.IsActionJustPressed("ui_cancel")) {
+            if (Input.GetMouseMode() == Input.MouseMode.Visible)
+                Input.SetMouseMode(Input.MouseMode.Captured);
+            else
+                Input.SetMouseMode(Input.MouseMode.Visible);
+        }
+    }
+
+    void GetChangeWeaponInput()
+    {
         int weaponChangeNumber = weaponNameToNumber[currentWeaponName];
+        const int weaponSlots = 4;
 
-        if (Input.IsActionPressed("weapon_1"))
-        { weaponChangeNumber = 0; }
-        if (Input.IsActionPressed("weapon_2"))
-        { weaponChangeNumber = 1; }
-        if (Input.IsActionPressed("weapon_3"))
-        { weaponChangeNumber = 2; }
-        if (Input.IsActionPressed("weapon_4"))
-        { weaponChangeNumber = 3; }
+        for (var i = 0; i < weaponSlots; i++)
+            if (Input.IsActionPressed($"weapon_{i+1}")) weaponChangeNumber = i;
 
-        if (Input.IsActionJustPressed("shift_weapon_positive"))
-        { weaponChangeNumber += 1; }
-        if (Input.IsActionJustPressed("shift_weapon_negative"))
-        { weaponChangeNumber -= 1; }
+        if (Input.IsActionJustPressed("shift_weapon_positive")) weaponChangeNumber++;
+        if (Input.IsActionJustPressed("shift_weapon_negative")) weaponChangeNumber--;
 
-        weaponChangeNumber = Mathf.Clamp(weaponChangeNumber, 0, weaponNumberToName.Count - 1);
+        // weaponChangeNumber = Mathf.Clamp(weaponChangeNumber, 0, weaponNumberToName.Count - 1);
+        weaponChangeNumber = weaponChangeNumber < 0 ? weaponNumberToName.Count - 1 : (weaponChangeNumber > weaponNumberToName.Count - 1 ? 0 : weaponChangeNumber);
 
-        if (changingWeapon == false)
+        if (!changingWeapon && !reloadingWeapon)
         {
             if (weaponNumberToName[weaponChangeNumber] != currentWeaponName)
             {
                 changingWeaponName = weaponNumberToName[weaponChangeNumber];
                 changingWeapon = true;
+                mouseScrollValue = weaponChangeNumber;
             }
         }
-        //  ----------------------------------
+        
+    }
 
-        //  ----------------------------------
-        //  Firing the weapons
+    void GetFireWeaponInput()
+    {
         if (Input.IsActionPressed("fire"))
         {
-            if (changingWeapon == false)
+            if (reloadingWeapon == false)
             {
-                Weapon currentWeapon = weapons[currentWeaponName];
-                if (currentWeapon != null)
+                if (changingWeapon == false)
                 {
-                    if (AnimationPlayer.currentState == currentWeapon.IdleAnimationState)
+                    Weapon currentWeapon = weapons[currentWeaponName];
+                    if (currentWeapon != null && currentWeapon.AmmoInWeapon > 0)
                     {
-                        AnimationPlayer.SetAnimation(currentWeapon.FireAnimationState);
+                        if (AnimationPlayer.currentState == currentWeapon.IdleAnimationState)
+                        {
+                            AnimationPlayer.SetAnimation(currentWeapon.FireAnimationState);
+                        }
                     }
                 }
             }
         }
-        //  ----------------------------------
-
     }
 
-    private void ProcessMovement(float delta)
-    {
-        _dir.y = 0;
-        _dir = _dir.Normalized();
+    void GetReloadInput() {
+        if (!reloadingWeapon && !changingWeapon)
+        {
+            if (Input.IsActionJustPressed("reload"))
+            {
+                Weapon currentWeapon = weapons[currentWeaponName];
 
-        _vel.y += delta * Gravity;
+                if (currentWeapon != null && currentWeapon.Reloadable)
+                {
+                    var currentAnimationState = AnimationPlayer.currentState;
+                    bool isReloading = false;
 
-        Vector3 hvel = _vel;
-        hvel.y = 0;
-
-        Vector3 target = _dir;
-
-        if (_isSprinting)
-            target *= MaxSprintSpeed;
-        else
-            target *= MaxSpeed;
-
-        float accel;
-        if (_dir.Dot(hvel) > 0)
-            if (_isSprinting)
-                accel = SprintAccel;
-            else
-                accel = Accel;
-        else
-            accel = Deaccel;
-
-        hvel = hvel.LinearInterpolate(target, accel * delta);
-        _vel.x = hvel.x;
-        _vel.z = hvel.z;
-        _vel = MoveAndSlide(_vel, new Vector3(0, 1, 0), false, 4, Mathf.Deg2Rad(MaxSlopeAngle));
+                    foreach (KeyValuePair<string, Weapon> weapon in weapons)
+                    {
+                        var weaponNode = weapons[weapon.Key];
+                        if (weaponNode != null)
+                        {
+                            if (currentAnimationState == weaponNode.ReloadAnimationState) {
+                                isReloading = true;
+                            }
+                        }
+                    }
+                    if (isReloading == false)
+                    {
+                        reloadingWeapon = true;
+                    }
+                }
+            }
+        }
     }
 
-    public void ProcessChangingWeapons(float delta)
+    void ProcessReloading()
     {
-        if (changingWeapon == true)
+        if (reloadingWeapon == true)
+        {
+            Weapon currentWeapon = weapons[currentWeaponName];
+            if (currentWeapon != null)
+                currentWeapon.ReloadWeapon();
+            reloadingWeapon = false;
+        }
+    }
 
+    void ProcessMovement(float delta)
+    {
+        _direction.y = 0;
+        _direction = _direction.Normalized();
+
+        _velocity.y += delta * Gravity;
+
+        Vector3 hvelocity = _velocity;
+        Vector3 target = _direction;
+
+        target *= _isSprinting ? MaxSprintSpeed : MaxSpeed;
+
+        float acceleration;
+
+        if (_direction.Dot(hvelocity) > 0)
+            acceleration = _isSprinting ? SprintAccel : Acceleration;
+        else
+            acceleration = Deacceleration;
+
+        
+        hvelocity = hvelocity.LinearInterpolate(target, acceleration * delta);
+        _velocity.x = hvelocity.x;
+        _velocity.z = hvelocity.z;
+        _velocity = MoveAndSlide(_velocity, new Vector3(0, 1, 0), false, 4, Mathf.Deg2Rad(MaxSlopeAngle));
+    }
+
+    void ProcessChangingWeapons()
+    {
+        if (changingWeapon)
         {
             bool weaponUnequipped = false;
             Weapon currentWeapon = weapons[currentWeaponName];
@@ -244,7 +299,7 @@ public class Player : KinematicBody, HittableByBullets
             }
             else
             {
-                if (currentWeapon.WeaponEnabled == true)
+                if (currentWeapon.WeaponEnabled)
                 {
                     weaponUnequipped = currentWeapon.UnequipWeapon();
                 }
@@ -254,7 +309,7 @@ public class Player : KinematicBody, HittableByBullets
                 }
             }
 
-            if (weaponUnequipped == true)
+            if (weaponUnequipped)
             {
                 bool weaponEquipped = false;
                 Weapon weaponToEquip = weapons[changingWeaponName];
@@ -266,12 +321,15 @@ public class Player : KinematicBody, HittableByBullets
                 else
                 {
                     if (weaponToEquip.WeaponEnabled == false)
-                    { weaponEquipped = weaponToEquip.EquipWeapon(); }
+                    {
+                        weaponEquipped = weaponToEquip.EquipWeapon();
+                    }
                     else
-                    { weaponEquipped = true; }
+                    {
+                        weaponEquipped = true;
+                    }
                 }
-
-                if (weaponEquipped == true)
+                if (weaponEquipped)
                 {
                     changingWeapon = false;
                     currentWeaponName = changingWeaponName;
@@ -281,11 +339,20 @@ public class Player : KinematicBody, HittableByBullets
         }
     }
 
-    public void FireBullet()
+    void ProcessUI()
     {
-        if (changingWeapon)
-        {
+        if (currentWeaponName == "UNARMED" || currentWeaponName == "KNIFE") {
+            UIStatusLabel.Text = $"HEALTH: {Mathf.Ceil(health)}";
+        }
+        else {
+            Weapon currentWeapon = weapons[currentWeaponName];
+            UIStatusLabel.Text = $"HEALTH: {Mathf.Ceil(health)} \nAMMO: {currentWeapon.AmmoInWeapon} / {currentWeapon.SpareAmmo}";
+        }
+    }
 
+    public void FireBullet() {
+        if (changingWeapon) {
+            
         }
         else
         {
@@ -295,15 +362,41 @@ public class Player : KinematicBody, HittableByBullets
 
     public override void _Input(InputEvent @event)
     {
-        if (@event is InputEventMouseMotion && Input.GetMouseMode() == Input.MouseMode.Captured)
-        {
-            InputEventMouseMotion mouseEvent = @event as InputEventMouseMotion;
-            _rotationHelper.RotateX(Mathf.Deg2Rad(mouseEvent.Relative.y * MouseSensitivity));
-            RotateY(Mathf.Deg2Rad(-mouseEvent.Relative.x * MouseSensitivity));
+        if (Input.GetMouseMode() == Input.MouseMode.Captured){
+            if (@event is InputEventMouseMotion) 
+            {
+                InputEventMouseMotion mouseMotionEvent = @event as InputEventMouseMotion;
+                
 
-            Vector3 cameraRot = _rotationHelper.RotationDegrees;
-            cameraRot.x = Mathf.Clamp(cameraRot.x, -70, 70);
-            _rotationHelper.RotationDegrees = cameraRot;
+                _rotationHelper.RotateX(Mathf.Deg2Rad(mouseMotionEvent.Relative.y * MouseSensitivity));
+                RotateY(Mathf.Deg2Rad(-mouseMotionEvent.Relative.x * MouseSensitivity));
+
+                Vector3 cameraRotation = _rotationHelper.RotationDegrees;
+                cameraRotation.x = Mathf.Clamp(cameraRotation.x, -70, 70);
+                _rotationHelper.RotationDegrees = cameraRotation;
+            }
+            if (@event is InputEventMouseButton)
+            {
+                InputEventMouseButton mouseButtonEvent = @event as InputEventMouseButton;
+                if (mouseButtonEvent.ButtonIndex == (int)ButtonList.WheelUp)
+                    mouseScrollValue += MOUSE_SCROLL_WHEEL_SENSITIVITY;
+                else if (mouseButtonEvent.ButtonIndex == (int)ButtonList.WheelDown)
+                    mouseScrollValue -= MOUSE_SCROLL_WHEEL_SENSITIVITY;
+
+                mouseScrollValue = mouseScrollValue < 0 ? weaponNumberToName.Count - 1 : (mouseScrollValue > weaponNumberToName.Count - 1 ? 0 : mouseScrollValue);
+
+                if (!changingWeapon && !reloadingWeapon)
+                {
+                    int roundMouseScrollValue = (int)Mathf.Round(mouseScrollValue);
+
+                    if (weaponNumberToName[roundMouseScrollValue] != currentWeaponName)
+                    {
+                        changingWeaponName = weaponNumberToName[roundMouseScrollValue];
+                        changingWeapon = true;
+                        mouseScrollValue = roundMouseScrollValue;
+                    }
+                }
+            }
         }
     }
 
@@ -311,4 +404,30 @@ public class Player : KinematicBody, HittableByBullets
     {
         throw new NotImplementedException();
     }
+
+    public void CreateSound(AudioStreamSample soundName, Vector3 position)
+    {
+        SimpleAudioPlayer audioClone = simpleAudioPlayer.Instance() as SimpleAudioPlayer;
+        Node sceneRoot = GetTree().Root.GetChildren()[0] as Node;
+        sceneRoot.AddChild(audioClone);
+        audioClone.PlaySound(soundName, position);
+    }
+
+    public void AddHealth(int additionalHealth)
+    {
+        health += additionalHealth;
+        health = Mathf.Clamp(health, 0, MAX_HEALTH);
+    }
+
+    public void AddAmmo(float additionalAmmo)
+    {
+        weapons["PISTOL"].SpareAmmo += (int)(Pistol.AMMO_IN_MAG * additionalAmmo);
+        weapons["RIFLE"].SpareAmmo += (int)(Rifle.AMMO_IN_MAG * additionalAmmo);
+    }
+
+    public void HealthDecay(float rate) 
+    {
+        health = health > 100 ? health - rate : health;
+    }
+
 }

@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=2]
+[gd_scene load_steps=43 format=2]
 
 [ext_resource path="res://assets/Colors.material" type="Material" id=1]
 [ext_resource path="res://assets/Emission.material" type="Material" id=2]
@@ -8,16 +8,19 @@
 [ext_resource path="res://assets/Gun_Emission.material" type="Material" id=6]
 [ext_resource path="res://assets/32-32_white.png" type="Texture" id=7]
 [ext_resource path="res://assets/Titillium-Regular.otf" type="DynamicFontData" id=8]
-[ext_resource path="res://Player.cs" type="Script" id=9]
-[ext_resource path="res://AnimationPlayerManager.cs" type="Script" id=10]
+[ext_resource path="res://Knife.cs" type="Script" id=9]
+[ext_resource path="res://Player.cs" type="Script" id=10]
 [ext_resource path="res://Pistol.cs" type="Script" id=11]
-[ext_resource path="res://Knife.cs" type="Script" id=12]
-[ext_resource path="res://Rifle.cs" type="Script" id=13]
+[ext_resource path="res://Rifle.cs" type="Script" id=12]
+[ext_resource path="res://AnimationLoader.cs" type="Script" id=13]
 [ext_resource path="res://Bullet_Scene.tscn" type="PackedScene" id=14]
+[ext_resource path="res://assets/Audio/PistolFire2.wav" type="AudioStream" id=15]
+[ext_resource path="res://assets/Audio/RifleFire2.wav" type="AudioStream" id=16]
+[ext_resource path="res://assets/Audio/RifleReload.wav" type="AudioStream" id=17]
 
 [sub_resource type="CapsuleShape" id=1]
-radius = 1.2
-height = 9.0
+radius = 1.5
+height = 8.3
 
 [sub_resource type="BoxShape" id=2]
 extents = Vector3( 0.8, 0.2, 0.8 )
@@ -869,7 +872,7 @@ tracks/35/loop_wrap = true
 tracks/35/imported = false
 tracks/35/enabled = true
 tracks/35/keys = {
-"times": PoolRealArray( 0.4 ),
+"times": PoolRealArray( 0.3 ),
 "transitions": PoolRealArray( 1 ),
 "values": [ {
 "args": [  ],
@@ -3895,7 +3898,11 @@ use_filter = true
 font_data = ExtResource( 8 )
 
 [node name="Player" type="KinematicBody"]
-script = ExtResource( 9 )
+script = ExtResource( 10 )
+Gravity = -90.0
+MaxSpeed = 30.0
+JumpSpeed = 36.0
+MaxSprintSpeed = 50.0
 
 [node name="Body_CollisionShape" type="CollisionShape" parent="."]
 transform = Transform( 1, 0, 0, 0, -1.62921e-07, -1, 0, 1, -1.62921e-07, 0, 5.81098, 0 )
@@ -4111,7 +4118,7 @@ anims/Rifle_fire = SubResource( 18 )
 anims/Rifle_idle = SubResource( 19 )
 anims/Rifle_reload = SubResource( 20 )
 anims/Rifle_unequip = SubResource( 21 )
-script = ExtResource( 10 )
+script = ExtResource( 13 )
 
 [node name="Camera" type="Camera" parent="Rotation_Helper"]
 transform = Transform( -1, 0, 3.25841e-07, 0, 1, 0, -3.25841e-07, 0, -1, 0, -0.307539, -0.0646362 )
@@ -4124,14 +4131,16 @@ transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -12.3914, 0 )
 
 [node name="Rifle_Point" type="Spatial" parent="Rotation_Helper/Gun_Fire_Points"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.163315, 10.4607, 7.04431 )
-script = ExtResource( 13 )
+script = ExtResource( 12 )
+FireSound = ExtResource( 16 )
+ReloadSound = ExtResource( 17 )
 
 [node name="Ray_Cast" type="RayCast" parent="Rotation_Helper/Gun_Fire_Points/Rifle_Point"]
 cast_to = Vector3( 0, 0, 80 )
 
 [node name="Knife_Point" type="Spatial" parent="Rotation_Helper/Gun_Fire_Points"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.163315, 10.4607, 2.54082 )
-script = ExtResource( 12 )
+script = ExtResource( 9 )
 
 [node name="Area" type="Area" parent="Rotation_Helper/Gun_Fire_Points/Knife_Point"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.17163, 1.26893 )
@@ -4145,6 +4154,7 @@ shape = SubResource( 22 )
 [node name="Pistol_Point" type="Spatial" parent="Rotation_Helper/Gun_Fire_Points"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.436506, 11.3604, 4.77607 )
 script = ExtResource( 11 )
+FireSound = ExtResource( 15 )
 BulletScene = ExtResource( 14 )
 
 [node name="Gun_Aim_Point" type="Spatial" parent="Rotation_Helper"]
@@ -4259,6 +4269,9 @@ custom_colors/font_color = Color( 1, 1, 1, 1 )
 text = "Health: 100
 Ammo: 000/000
 "
+__meta__ = {
+"_edit_use_anchors_": false
+}
 
 [node name="Death_Screen" type="ColorRect" parent="HUD"]
 visible = false

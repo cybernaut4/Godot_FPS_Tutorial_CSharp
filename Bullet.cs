@@ -3,45 +3,36 @@ using System;
 
 public class Bullet : Spatial
 {
-    public float Speed = 70;
-    public float Damage = 15;
+    [Export] public float Speed = 70;
+    [Export] public float Damage = 15;
 
-    public float KillTimer = 4;
-    public float Timer = 0;
+    const int killTimer = 4;
+    float timer = 0;
 
-    public bool HitSomething = false;
+    bool hitSomething = false;
 
     public override void _Ready()
     {
-        GetNode("Area").Connect("body_entered", this, "collided");
+        GetNode<Area>("Area").Connect("body_entered", this, "Collided");
     }
-
 
     public override void _PhysicsProcess(float delta)
     {
-        var forward_dir = GlobalTransform.basis.z.Normalized();
+        var forwardDirection = GlobalTransform.basis.z.Normalized();
+        GlobalTranslate(forwardDirection * Speed * delta);
 
-        GlobalTranslate(forward_dir * Speed * delta);
+        timer += delta;
 
-
-        Timer += delta;
-
-        if (Timer >= KillTimer)
-        {
+        if (timer >= killTimer)
             QueueFree();
-        }
     }
 
-    public void collided(CollisionObject2D body)
-    {
-        if (HitSomething == false)
-        {
+    public void Collided(CollisionObject2D body) {
+        if (!hitSomething)
             if (body is HittableByBullets hittableByBullets)
-            {
                 hittableByBullets.BulletHit(Damage, GlobalTransform);
-            }
-        }
-        HitSomething = true;
+
+        hitSomething = true;
         QueueFree();
     }
 }

@@ -1,2 +1,2 @@
-﻿52576
-D:\Godot\Godot\GodotC#.exe
+﻿58534
+D:\Standalone\tools\Godot_v3.2.3-stable_mono_win64\Godot_v3.2.3-stable_mono_win64.exe
