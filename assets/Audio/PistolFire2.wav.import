@@ -1,0 +1,21 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/PistolFire2.wav-bcb65938c91ecc0fdc2a6f5a59f0042c.sample"
+
+[deps]
+
+source_file="res://assets/Audio/PistolFire2.wav"
+dest_files=[ "res://.import/PistolFire2.wav-bcb65938c91ecc0fdc2a6f5a59f0042c.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop=false
+compress/mode=0
