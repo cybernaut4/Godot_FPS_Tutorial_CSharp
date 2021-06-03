@@ -1,32 +1,32 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Godot\\Projects\\Godot_FPS_Tutorial_CSharp\\Godot FPS.csproj": {}
+    "D:\\Arkl1te\\Projects\\Godot\\Godot_FPS_Tutorial_CSharp\\Godot FPS.csproj": {}
   },
   "projects": {
-    "D:\\Godot\\Projects\\Godot_FPS_Tutorial_CSharp\\Godot FPS.csproj": {
+    "D:\\Arkl1te\\Projects\\Godot\\Godot_FPS_Tutorial_CSharp\\Godot FPS.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Godot\\Projects\\Godot_FPS_Tutorial_CSharp\\Godot FPS.csproj",
+        "projectUniqueName": "D:\\Arkl1te\\Projects\\Godot\\Godot_FPS_Tutorial_CSharp\\Godot FPS.csproj",
         "projectName": "Godot FPS",
-        "projectPath": "D:\\Godot\\Projects\\Godot_FPS_Tutorial_CSharp\\Godot FPS.csproj",
-        "packagesPath": "C:\\Users\\Elias Post\\.nuget\\packages\\",
-        "outputPath": "D:\\Godot\\Projects\\Godot_FPS_Tutorial_CSharp\\.mono\\temp\\obj\\",
+        "projectPath": "D:\\Arkl1te\\Projects\\Godot\\Godot_FPS_Tutorial_CSharp\\Godot FPS.csproj",
+        "packagesPath": "C:\\Users\\Arkl1te\\.nuget\\packages\\",
+        "outputPath": "D:\\Arkl1te\\Projects\\Godot\\Godot_FPS_Tutorial_CSharp\\.mono\\temp\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Elias Post\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Arkl1te\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net472"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net472": {
+            "targetAlias": "net472",
             "projectReferences": {}
           }
         },
@@ -38,14 +38,8 @@
       },
       "frameworks": {
         "net472": {
-          "dependencies": {
-            "Microsoft.NETFramework.ReferenceAssemblies": {
-              "target": "Package",
-              "version": "[1.0.0, )",
-              "autoReferenced": true
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.0.100\\RuntimeIdentifierGraph.json"
+          "targetAlias": "net472",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.201\\RuntimeIdentifierGraph.json"
         }
       }
     }

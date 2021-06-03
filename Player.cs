@@ -80,6 +80,7 @@ public class Player : KinematicBody, HittableByBullets
         foreach (KeyValuePair<string, Weapon> weapon in weapons)
         {
             Weapon weaponNode = weapon.Value;
+
             if (weaponNode != null)
             {
                 weaponNode.PlayerNode = this;

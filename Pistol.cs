@@ -93,4 +93,5 @@ public class Pistol : Weapon
             return false;
         }
     }
+
 }
